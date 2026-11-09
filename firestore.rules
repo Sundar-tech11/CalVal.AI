@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'savedCount', 'favoritesCount', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        data.displayName is string && data.displayName.size() <= 100 &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+        (!('role' in data) || (data.role in ['user', 'analyst', 'admin'])) &&
+        (!('savedCount' in data) || data.savedCount is number) &&
+        (!('favoritesCount' in data) || data.favoritesCount is number) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Validation Blueprint for SavedValuation
+    function isValidValuation(data) {
+      return data.keys().hasAll(['userId', 'predictedValue', 'modelId', 'latitude', 'longitude', 'oceanProximity', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'userId', 'propertyName', 'locationPreset', 'oceanProximity',
+          'latitude', 'longitude', 'medianIncome', 'housingMedianAge',
+          'totalRooms', 'totalBedrooms', 'population', 'households',
+          'modelId', 'modelName', 'modelR2', 'predictedValue',
+          'confidenceLow', 'confidenceHigh', 'confidenceMargin',
+          'priceToIncome', 'pricePerRoom', 'isFavorite', 'notes',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.predictedValue is number && data.predictedValue > 0 &&
+        data.modelId is string && data.modelId.size() <= 60 &&
+        data.latitude is number && data.longitude is number &&
+        data.oceanProximity in ['<1H OCEAN', 'INLAND', 'ISLAND', 'NEAR BAY', 'NEAR OCEAN'] &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+        (!('propertyName' in data) || (data.propertyName is string && data.propertyName.size() <= 120)) &&
+        (!('locationPreset' in data) || (data.locationPreset is string && data.locationPreset.size() <= 80)) &&
+        (!('medianIncome' in data) || data.medianIncome is number) &&
+        (!('housingMedianAge' in data) || data.housingMedianAge is number) &&
+        (!('totalRooms' in data) || data.totalRooms is number) &&
+        (!('totalBedrooms' in data) || data.totalBedrooms is number) &&
+        (!('population' in data) || data.population is number) &&
+        (!('households' in data) || data.households is number) &&
+        (!('modelName' in data) || (data.modelName is string && data.modelName.size() <= 100)) &&
+        (!('modelR2' in data) || data.modelR2 is number) &&
+        (!('confidenceLow' in data) || data.confidenceLow is number) &&
+        (!('confidenceHigh' in data) || data.confidenceHigh is number) &&
+        (!('confidenceMargin' in data) || data.confidenceMargin is number) &&
+        (!('priceToIncome' in data) || data.priceToIncome is number) &&
+        (!('pricePerRoom' in data) || data.pricePerRoom is number) &&
+        (!('isFavorite' in data) || data.isFavorite is bool) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // User Profile Documents
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && incoming().uid == userId;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) &&
+                    incoming().uid == existing().uid &&
+                    incoming().createdAt == existing().createdAt;
+      allow delete: if false;
+
+      // User Private Subcollection: Valuations
+      match /valuations/{valuationId} {
+        allow get: if isOwner(userId) && isValidId(valuationId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(valuationId) && isValidValuation(incoming()) && incoming().userId == userId;
+        allow update: if isOwner(userId) && isValidId(valuationId) && isValidValuation(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) && isValidId(valuationId);
+      }
+    }
+  }
+}

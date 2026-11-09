@@ -1,0 +1,6 @@
+{
+  "name": "CalVal.AI — California Housing ML Valuation Suite",
+  "description": "Machine learning valuation suite and spatial intelligence dashboard for California residential property price estimation using Scikit-Learn and FastAPI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

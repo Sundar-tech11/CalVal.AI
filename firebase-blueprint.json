@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and portfolio statistics",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user ID matching Firebase Auth UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 100
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar URL",
+          "maxLength": 1000
+        },
+        "role": {
+          "type": "string",
+          "description": "Account authorization role",
+          "enum": ["user", "analyst", "admin"]
+        },
+        "savedCount": {
+          "type": "number",
+          "description": "Total count of saved valuations"
+        },
+        "favoritesCount": {
+          "type": "number",
+          "description": "Total count of favorited valuations"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["uid", "email", "displayName", "createdAt"]
+    },
+    "SavedValuation": {
+      "title": "SavedValuation",
+      "description": "An appraisal record saved by a user with input parameters and ML outputs",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique valuation document ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID",
+          "maxLength": 128
+        },
+        "propertyName": {
+          "type": "string",
+          "description": "Custom label or nickname for property",
+          "maxLength": 120
+        },
+        "locationPreset": {
+          "type": "string",
+          "description": "California preset tag if applied",
+          "maxLength": 80
+        },
+        "oceanProximity": {
+          "type": "string",
+          "description": "Submarket ocean proximity category",
+          "enum": ["<1H OCEAN", "INLAND", "ISLAND", "NEAR BAY", "NEAR OCEAN"]
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Latitude coordinate"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude coordinate"
+        },
+        "medianIncome": {
+          "type": "number",
+          "description": "Median household income factor in tens of thousands"
+        },
+        "housingMedianAge": {
+          "type": "number",
+          "description": "Median age of housing structure"
+        },
+        "totalRooms": {
+          "type": "number",
+          "description": "Total rooms in tract"
+        },
+        "totalBedrooms": {
+          "type": "number",
+          "description": "Total bedrooms in tract"
+        },
+        "population": {
+          "type": "number",
+          "description": "Total population in tract"
+        },
+        "households": {
+          "type": "number",
+          "description": "Total households in tract"
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Machine learning model used for appraisal",
+          "maxLength": 60
+        },
+        "modelName": {
+          "type": "string",
+          "description": "Display name of model architecture",
+          "maxLength": 100
+        },
+        "modelR2": {
+          "type": "number",
+          "description": "Validation R-squared score of model"
+        },
+        "predictedValue": {
+          "type": "number",
+          "description": "Algorithmic valuation in USD"
+        },
+        "confidenceLow": {
+          "type": "number",
+          "description": "Lower bound of confidence interval"
+        },
+        "confidenceHigh": {
+          "type": "number",
+          "description": "Upper bound of confidence interval"
+        },
+        "confidenceMargin": {
+          "type": "number",
+          "description": "Estimated RMSE margin"
+        },
+        "priceToIncome": {
+          "type": "number",
+          "description": "Price-to-income multiple"
+        },
+        "pricePerRoom": {
+          "type": "number",
+          "description": "Price per room in USD"
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Whether user marked this appraisal as favorite"
+        },
+        "notes": {
+          "type": "string",
+          "description": "User notes or investment thesis",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Record creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["userId", "predictedValue", "modelId", "latitude", "longitude", "oceanProximity", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User account documents containing profile and aggregate portfolio counts"
+    },
+    "/users/{userId}/valuations/{valuationId}": {
+      "schema": {
+        "$ref": "#/entities/SavedValuation"
+      },
+      "description": "Private subcollection of saved property valuations owned by the user"
+    }
+  }
+}
